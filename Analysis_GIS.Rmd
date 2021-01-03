@@ -1,0 +1,298 @@
+---
+title: "Assessment"
+output:
+  html_document: default
+  pdf_document: default
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+# Data
+
+df <- read.csv(url("https://raw.githubusercontent.com/Sheedy21/GIS_Assessment/master/data_analysis.csv"))
+
+df$UBIGEO <- f_pad_zero(df$UBIGEO)
+
+districts <- st_read(here::here("DISTRICT_1874","DISTRICT_1874.shp"))
+  
+df_dist <-merge(df, districts, by = "UBIGEO", all.x=TRUE)
+
+drop <- c("NOMBDEP","NOMBPROV","NOMBDIST","UBIGEO")
+data = df[,!(names(df) %in% drop)]
+
+datasummary_skim(
+  df[5:25],
+  output = "html",
+  fmt = "%.1f",
+  histogram = TRUE,
+  title = "Summary Statistics",
+  notes = NULL,
+  align = "c",
+)
+
+```
+
+## Handling outliers
+
+In this part we are going to replace the outliers
+
+```{r pressure, echo=FALSE}
+
+### Boxplot
+
+##########################################
+
+df %>%
+  ggplot( aes(y=BUDGET/(10^6), fill="blue")) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Budget") +
+  xlab("") + ylab("PEN * 10^6")
+
+
+#################3
+
+sex <-df[,c(4,6,7)]
+df_sex<-pivot_longer(sex,!UBIGEO,names_to = "Sex",values_to = "count")
+
+df_sex %>%
+  ggplot( aes(x=Sex, y=count/(10^6), fill="blue")) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Sex") +
+  xlab("") + ylab("Nº people * 10^6")
+
+
+#################3
+
+age <-df[,c(4,8:13)]
+df_age<-pivot_longer(age,!UBIGEO,names_to = "age",values_to = "count")
+
+df_age %>%
+  ggplot( aes(x=age, y=count/(10^6), fill="blue")) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Age Groups") +
+  xlab("") + ylab("Nº people * 10^6")
+
+#################3
+
+area <-df[,c(4,14,15)]
+df_area<-pivot_longer(area,!UBIGEO,names_to = "area",values_to = "count")
+
+df_area %>%
+  ggplot( aes(x=area, y=count/(10^6), fill="blue")) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Area") +
+  xlab("") + ylab("Nº people * 10^6")
+
+#################3
+
+contract <-df[,c(4,16,17)]
+df_contract<-pivot_longer(contract,!UBIGEO,names_to = "contract",values_to = "count")
+
+df_contract %>%
+  ggplot( aes(x=contract, y=count/(10^6), fill="blue")) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Contract") +
+  xlab("") + ylab("PEN * 10^6")
+
+
+##########################################
+
+df %>%
+  ggplot( aes(y=SUBSIDY/(10^6), fill="blue")) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Subsidy") +
+  xlab("") + ylab("PEN * 10^6")
+
+##########################################
+
+df %>%
+  ggplot( aes(y=CASES_COVID/(10^3), fill="blue")) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Confirmed cases of COVID-19") +
+  xlab("") + ylab("Nº people * 10^3")
+
+#################3
+
+ubn <-df[,c(4,20:25)]
+df_ubn<-pivot_longer(ubn,!UBIGEO,names_to = "ubn",values_to = "count")
+
+df_ubn %>%
+  ggplot( aes(x=ubn, y=count, fill="blue")) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    plot.title = element_text(size=11)
+  ) +
+  ggtitle("Unsatisfied Basic Needs (UBN)") +
+  xlab("") + ylab("(%)")
+
+
+#########################################33
+
+df_m <- df
+g <- function(x){
+  c(N1 = quantile(x,prob=0.25) - 1.5*(quantile(x,prob=0.75) -quantile(x,prob=0.25)), N3 = quantile(x,prob=0.75) + 1.5*(quantile(x,prob=0.75) - quantile(x,prob=0.25)) )
+}
+
+quant <- as.data.frame(sapply(data,g))
+
+outliers <- data.frame("V1"=33083363,"V2"=57115496,"V3"=58960104,
+                       "V4"=5554463,"V5"=11797456,"V6"=18344232,
+                       "V7"=53413672,"V8"=15499294,"V9"=6394488,
+                       "V10"=116075600,"V11"=7365775,"V12"=549066248,
+                       "V13"=973674,"V14"=16704040,"V15"=33602,
+                       "V16"=99.48,"V17"=69.35,"V18"=96.74,
+                       "V19"=94.71,"V20"=20.61,"V21"=31.21)
+
+for (j in 1:21){
+  for (i in 1:nrow(df_m)){
+    if (df_m[i,j+4]>=outliers[j]){
+      df_m[i,j+4]=quant[2,j]
+    } 
+  }
+}
+
+```
+
+# Normality test
+
+```{r setup, include=FALSE}
+
+transform <- df_m$UBIGEO
+
+for (j in 5:25) {
+  # Transform using values -6 to 6 by 0.1
+  Box = boxcox(sapply(df_m[j],as.numeric) + 0.000001 ~ 1,lambda = seq(-6,6,0.1))         
+# Create a data frame with the results, and order decreasing
+  
+  Cox = data.frame(Box$x, Box$y)             
+  Cox2 = Cox[with(Cox, order(-Cox$Box.y)),] 
+  Cox2[1,]                                  
+  
+  # Extract that lambda
+  lambda = Cox2[1, "Box.x"]
+  
+   v = (df_m[j] ^ lambda - 1)/lambda   
+   transform <- cbind(transform,v)
+}
+
+colnames(transform) <- c("UBIGEO","BUDGET","SEX_M","SEX_F","AGE_0_2","AGE_3_8",
+                         "AGE_9_18","AGE_19_45","AGE_46_65","AGE_66_120",   
+                         "AREA_URB","AREA_RUR","CONTRACT_SERV","CONTRACT_PERS",
+                         "SUBSIDY","CASES_COVID","UBN_1","UBN_2","UBN_3","UBN_4",        
+                         "UBN_5","UBN_6")
+
+```
+# Join all the information
+
+```{r setup, include=FALSE}
+
+districts <- st_read(here::here("DISTRICT_1874","DISTRICT_1874.shp"))
+
+df_dist <-merge(transform, districts, by = "UBIGEO", all.x=TRUE)
+
+
+```
+
+# Correlation
+
+```{r setup, include=FALSE}
+
+ggcorr(df_dist[2:22], palette = "RdBu", method = c("pairwise", "pearson"),legend.size = 10, label_size = 4,label = TRUE)
+
+```
+
+# Regression model
+
+```{r pressure, echo=FALSE}
+knitr::opts_chunk$set(message = FALSE)
+model <- lm(BUDGET ~ SEX_M + SEX_F + AGE_0_2 + AGE_3_8 + AGE_9_18 + AGE_19_45 + 
+              AGE_46_65 +  AGE_66_120 + AREA_URB + AREA_RUR + CONTRACT_SERV + 
+               SUBSIDY + CASES_COVID + UBN_1 + UBN_4 + UBN_5, data=df_dist)
+
+summ(model)
+
+
+
+```
+
+# Correlation
+
+```{r setup, include=FALSE}
+
+
+```
+
+
+# Correlation
+
+```{r setup, include=FALSE}
+
+
+```
+
+
+# Correlation
+
+```{r setup, include=FALSE}
+
+
+```
+
+
+# Correlation
+
+```{r setup, include=FALSE}
+
+
+```
+
+
+
+
+
